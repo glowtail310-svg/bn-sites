@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>クイズ（修正版）</title>
+    <style>
+        :root { --vanilla:#f6e8c3; }
+        body { font-family: sans-serif; margin:15px; line-height:1.6; }
+        h2{ margin-bottom:10px; }
+        .major{ margin-bottom:50px; padding:15px; border:2px solid var(--vanilla); border-radius:12px; background:#fffdf6; }
+        .minor{ margin-top:20px; padding:15px; border:1px solid #ddd; border-radius:10px; }
+        button{ background:var(--vanilla); border:none; padding:10px 14px; border-radius:8px; font-size:16px; }
+        label{ display:block; margin:6px 0; }
+        .result{ margin-top:10px; font-weight:bold; }
+        .image-box{ margin:15px 0; text-align:center; }
+        .image-box img{ max-width:100%; height:auto; border-radius:8px; }
+        .truefalse-container{ display:flex; margin-top:15px; }
+        .truefalse-container button{ flex:1; font-size:20px; padding:18px; }
+        .truefalse-container button:first-child{ border-right:1px solid #ddd; }
+        select{ width:100%; padding:10px; font-size:16px; border-radius:8px; border:1px solid #ccc; }
+        #resultBox{ text-align:center; margin-top:40px; }
+        #accuracy{ font-size:40px; font-weight:bold; color:#f3e5ab; }
+        #score{ font-size:24px; margin-top:10px; }
+        .wordbank{ margin-top:25px; padding:12px; border:1px dashed #ccc; border-radius:10px; background:#fffdf6; }
+        .wordbank-title{ font-weight:bold; margin-bottom:8px; }
+        .wordbank span{ display:inline-block; margin:4px 6px; padding:6px 10px; background:var(--vanilla); border-radius:6px; font-size:14px; }
+        .errorBox { margin-top:20px; padding:10px; border:1px solid #f99; background:#fff0f0; color:#900; border-radius:8px; }
+    </style>
+</head>
+
+<body>
+    <h2>クイズ（修正版）</h2>
+
+    <div style="margin:20px 0;">
+        1問ずつ答え合わせできるよ。<br>
+        正解すると次の問題へスクロールするよ。<br>
+        語群は見た目は押せそうでも、ここでは押せない仕様だよ。
+    </div>
+
+    <label>
+        <input type="checkbox" id="scrollToggle" checked>
+        スクロール機能ON
+    </label>
+
+    <div id="quiz-container"></div>
+
+    <div id="resultBox">
+        <div id="accuracy">正解率: 0%</div>
+        <div id="score">正解数: 0 / 0</div>
+    </div>
+
+    <div id="errorArea"></div>
+
+    <script>
+        // ---- データ ----
+        const quizData = [
+            {
+            title:"大問1 ネットワーク基礎（語群選択）",
+            type:"CH",
+        
+            wordbank:[
+            "1. LAN",
+            "2. WAN",
+            "3. Wi-Fi",
+            "4. ルータ",
+            "5. ハブ",
+            "6. サーバー",
+            "7. IPアドレス",
+            "8. インターネット",
+            "9. クライアント",
+            "10. ISP"
+            ],
+        
+            questions:[
+            {
+            question:"1. 建物同士を結ぶ広範囲のネットワーク",
+            image:"",
+            answer:1
+            },
+            {
+            question:"2. 世界中のネットワークをつないだ巨大なネットワーク",
+            image:"",
+            answer:7
+            },
+            {
+            question:"3. ネットワーク上の機器を識別するための番号（ヒント：ネットワーク上の住所のようなもの）",
+            image:"",
+            answer:6
+            },
+            {
+            question:"4. 複数の機器をまとめてつなぎ、データを全体に送る装置（ヒント：車輪の中央のようなもの）",
+            image:"",
+            answer:4
+            },
+            {
+            question:"5. ネットワーク同士をつなぎ、必要な相手にだけデータを送る装置",
+            image:"",
+            answer:3
+            },
+            {
+            question:"6. ケーブルなしでネットワークに接続できる技術",
+            image:"",
+            answer:2
+            },
+            {
+            question:"7. インターネット上でサービスを提供するコンピューター",
+            image:"",
+            answer:5
+            },
+            {
+            question:"8. インターネット接続のサービスを提供する会社のこと",
+            image:"",
+            answer:9
+            },
+            {
+            question:"9. サービスを提供するコンピュータからデータを受け取るコンピュータのこと",
+            image:"",
+            answer:8
+            }
+            ]
+            },
+        
+            {
+            title:"大問2 ○×問題",
+            type:"OX",
+            questions:[
+            {
+            question:"1. LANとは、同一敷地や同一建物内などの限られた範囲で構築されているネットワークのこと。",
+            image:"",
+            answer:true
+            },
+            {
+            question:"2. プロトコルとは、コンピュータ同士でデータのやり取りをするために定められたルールや約束事。",
+            image:"",
+            answer:true
+            },
+            {
+            question:"3. ハブとは、異なるネットワーク同士をつなげるための装置のこと。",
+            image:"",
+            answer:false
+            }
+            ]
+            },
+        
+            {
+            title:"大問3 IPアドレス（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. IPv4は約1.4億個、IPv6は43億個",
+            "2. IPv4は32億個、IPv6は128億個",
+            "3. IPv4は約43億個、IPv6は約340澗個"
+            ],
+        
+            questions:[
+            {
+            question:"IPv4とIPv6はおおよそいくつのIPアドレスを作ることができるか、正しい組み合わせを以下から一つ選びなさい：",
+            image:"",
+            answer:2
+            }
+            ]
+            },
+        
+            {
+            title:"大問4 Webの仕組み（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. WWW",
+            "2. HTTPS/HTTP",
+            "3. TLS",
+            "4. HTML",
+            "5. マルウェア",
+            "6. メールサーバ",
+            "7. Webメール",
+            "8. リンク"
+            ],
+        
+            questions:[
+            {
+            question:"1. インターネット上でウェブページを閲覧するための仕組み",
+            image:"",
+            answer:0
+            },
+            {
+            question:"2. ウェブページを記述するための言語",
+            image:"",
+            answer:3
+            },
+            {
+            question:"3. 他のウェブページや画像などに関連付けをする仕組み",
+            image:"",
+            answer:7
+            },
+            {
+            question:"4. ウェブサーバーにある情報をウェブブラウザで表示させるときに使われるプロトコル",
+            image:"",
+            answer:1
+            },
+            {
+            question:"5. ウェブブラウザを使ってメールのやり取りをするシステム",
+            image:"",
+            answer:6
+            },
+            {
+            question:"6. 不正かつ有害なソフトウェアの総称",
+            image:"",
+            answer:4
+            }
+            ]
+            },
+        
+            {
+            title:"大問5 情報セキュリティ（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. 架空請求",
+            "2. サイバー犯罪",
+            "3. 生体認証",
+            "4. フィッシング",
+            "5. 不正改ざん",
+            "6. ウイルス",
+            "7. 不正アクセス",
+            "8. ソーシャルエンジニアリング",
+            "9. ID・パスワード",
+            "10. 二段階認証"
+            ],
+        
+            questions:[
+            {
+            question:"1. 情報技術を利用した犯罪",
+            image:"",
+            answer:1
+            },
+            {
+            question:"2. 情報へのアクセスを認められていない者が、その情報にアクセスすること",
+            image:"",
+            answer:6
+            },
+            {
+            question:"3. マルウェアの一種で、コンピュータウイルスとも言う",
+            image:"",
+            answer:5
+            },
+            {
+            question:"4. 情報を不正に書き換えること",
+            image:"",
+            answer:4
+            },
+            {
+            question:"5. 人間の心理的な隙や行動のミスにつけ込んで、個人が持つ秘密情報を入手すること",
+            image:"",
+            answer:7
+            },
+            {
+            question:"6. 本人確認のために2段階の認証を行う認証方式",
+            image:"",
+            answer:9
+            },
+            {
+            question:"7. 指紋や顔など、個人の身体的特徴を用いて認証すること",
+            image:"",
+            answer:2
+            }
+            ]
+            },
+        
+            {
+            title:"大問6 暗号化（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. 共通鍵暗号方式",
+            "2. 共通キー",
+            "3. 暗号文",
+            "4. 暗号化",
+            "5. キー（鍵）",
+            "6. 平文",
+            "7. 復号化",
+            "8. 公開キー",
+            "9. ネットワーク",
+            "10. 公開鍵暗号方式"
+            ],
+        
+            questions:[
+            {
+            question:"1. 情報を第三者には意味の通じないデータに変換すること",
+            image:"",
+            answer:3
+            },
+            {
+            question:"2. 暗号化されたデータを元のデータに戻すこと",
+            image:"",
+            answer:6
+            },
+            {
+            question:"3. 暗号化されていないデータのこと",
+            image:"",
+            answer:5
+            },
+            {
+            question:"4. 暗号化や復元の時に使うデータのこと",
+            image:"",
+            answer:4
+            },
+            {
+            question:"5. 暗号化と復元に同じ鍵を使用する暗号方式",
+            image:"",
+            answer:0
+            },
+            {
+            question:"6. 暗号化と復号で公開鍵と秘密鍵の2つの違う鍵を使用する暗号方式",
+            image:"",
+            answer:9
+            }
+            ]
+            },
+        
+            {
+            title:"大問7 情報総合（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. IPアドレス",
+            "2. 共通鍵暗号方式",
+            "3. ISP",
+            "4. マルウェア",
+            "5. URL（ドメイン名）",
+            "6. HTTPS",
+            "7. LAN",
+            "8. インターネット",
+            "9. SMTP",
+            "10. サーバ",
+            "11. HTML",
+            "12. プロトコル",
+            "13. 生体認証",
+            "14. ハブ",
+            "15. 公開鍵暗号方式",
+            "16. フィッシング",
+            "17. ソーシャルエンジニアリング",
+            "18. くもの巣"
+            ],
+        
+            questions:[
+            {
+            question:"1. LANやネットワーク環境上で個々のコンピュータを識別するための番号",
+            image:"",
+            answer:0
+            },
+            {
+            question:"2. サービスを提供するコンピュータのこと。Web(サーバ)や、メール(サーバ)などが存在する",
+            image:"",
+            answer:9
+            },
+            {
+            question:"3. Webを閲覧するための仕組みであるWWWとは、「世界規模の（　　）」を意味する",
+            image:"",
+            answer:17
+            },
+            {
+            question:"4. LAN内の複数の機器同士をつなぐ集線装置",
+            image:"",
+            answer:13
+            },
+            {
+            question:"5. 家や学校など、一定の範囲内で使用されるネットワーク",
+            image:"",
+            answer:6
+            },
+            {
+            question:"6. インターネットへの接続を提供する事業者",
+            image:"",
+            answer:2
+            },
+            {
+            question:"7. コンピュータネットワーク上で通信を行うための共通の約束事",
+            image:"",
+            answer:11
+            },
+            {
+            question:"8. インターネット上のホームページ（Webサイト）やファイルの位置や情報を示すもの",
+            image:"",
+            answer:4
+            },
+            {
+            question:"9. Webページを作成するための特殊な言語",
+            image:"",
+            answer:10
+            },
+            {
+            question:"10. ある部門の担当者をよそおって電話をかけ、パスワードなどの個人情報を盗み出す手法",
+            image:"",
+            answer:16
+            },
+            {
+            question:"11. コンピュータウイルスのように不正かつ有害なソフトウェアの総称",
+            image:"",
+            answer:3
+            },
+            {
+            question:"12. WebページのデータにはHTTPや暗号化の機能を加えた（　　）というプロトコルが使われている",
+            image:"",
+            answer:5
+            },
+            {
+            question:"13. 指紋や顔など身体的特徴を用いて認証する方法",
+            image:"",
+            answer:12
+            },
+            {
+            question:"14. 偽サイトに誘導してログインIDやパスワードなどの個人情報を盗むネット犯罪のこと",
+            image:"",
+            answer:15
+            },
+            {
+            question:"15. 暗号化と復号に同じ鍵を使用する暗号方式",
+            image:"",
+            answer:1
+            }
+            ]
+            },
+        
+            {
+            title:"大問8 情報システム（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. 情報サービス",
+            "2. 情報システム",
+            "3. 情報サークル",
+            "4. 情報通信ネットワーク",
+            "5. データベース",
+            "6. DBMS",
+            "7. 情報サービス",
+            "8. 地図情報サービス",
+            "9. GPS（全地球測位システム）"
+            ],
+        
+            questions:[
+            {
+            question:"1. 様々な機器をネットワークで結び、全体としてサービスを実現させる仕組みのこと",
+            image:"",
+            answer:1
+            },
+            {
+            question:"2. 情報システムを効率的に活用する上で重要な役割を果たすもの",
+            image:"",
+            answer:4
+            },
+            {
+            question:"3. 地理情報サービスは、データベースとあるものを組み合わせることで実現されている。そのあるものとは？",
+            image:"",
+            answer:8
+            }
+            ]
+            },
+        
+            {
+            title:"大問9 データベース基礎（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. キー",
+            "2. DBMS",
+            "3. レコード",
+            "4. フィールド",
+            "5. 主キー"
+            ],
+        
+            questions:[
+            {
+            question:"1. そのひとつのデータによって、全ての情報がひとつ決まるもの（例：出席番号→名前・出身校　予約番号→予約時間・予約席）",
+            image:"",
+            answer:4
+            },
+            {
+            question:"2. 表のたて列のこと",
+            image:"",
+            answer:3
+            },
+            {
+            question:"3. 表のよこ列のこと",
+            image:"",
+            answer:2
+            }
+            ]
+            },
+        
+            {
+            title:"大問10 データベースコマンド（チェックボックス）",
+            type:"CB",
+        
+            wordbank:[
+            "1. 選択",
+            "2. データ",
+            "3. 命令",
+            "4. ソート",
+            "5. 射影",
+            "6. 結合"
+            ],
+        
+            questions:[
+            {
+            question:"データベースで使えるコマンドで、習って実際に使ったことのあるもの（複数選択可）",
+            image:"",
+            answers:[0,4,5]
+            }
+            ]
+            },
+        
+            {
+            title:"大問11 データベースコマンド応用（チェックボックス）※画像問題",
+            type:"CB",
+        
+            wordbank:[
+            "1. 選択",
+            "2. 射影",
+            "3. 結合",
+            "4. 名前",
+            "5. 性別",
+            "6. 学年",
+            "7. クラス",
+            "8. 所属クラブ",
+            "9. 男",
+            "10. バレー",
+            "11. 美術",
+            "12. 吹奏楽",
+            "13. ソフト"
+            ],
+        
+            questions:[
+            {
+            question:"【画像問題】練習問題「次の結果を得るには」の画像を参照。1番目のコマンド・条件・値を選択しなさい。（複数選択可）",
+            image:"db.jpg",
+            answers:[0,4,8]
+            }
+            ]
+            },
+        
+            {
+            title:"大問12 射影の操作（チェックボックス）",
+            type:"CB",
+        
+            wordbank:[
+            "1. 重複データの削除",
+            "2. 並び替え",
+            "3. データを減らす",
+            "4. データを取り除く"
+            ],
+        
+            questions:[
+            {
+            question:"射影は「列の取り出し」とどういう処理が組み合わさった操作か？（複数選択可）",
+            image:"",
+            answers:[0]
+            }
+            ]
+            },
+        
+            {
+            title:"大問13 データ型（選択問題）※画像問題",
+            type:"CH",
+        
+            wordbank:[
+            "1. ユーザー名",
+            "2. 整数型",
+            "3. 文字列型",
+            "4. 登録日",
+            "5. 西暦",
+            "6. 日付型"
+            ],
+        
+            questions:[
+            {
+            question:"【画像問題】データベースの型を示す画像を参照。①のデータ型は？",
+            image:"df.jpg",
+            answer:2
+            },
+            {
+            question:"【画像問題】データベースの型を示す画像を参照。②のデータ型は？",
+            image:"",
+            answer:5
+            }
+            ]
+            },
+        
+            {
+            title:"大問14 データ収集（チェックボックス）",
+            type:"CB",
+        
+            wordbank:[
+            "1. オープンデータ",
+            "2. アンケート",
+            "3. インタビュー",
+            "4. 先行研究",
+            "5. 統計情報"
+            ],
+        
+            questions:[
+            {
+            question:"1. すでに集められているデータの種類（複数選択可）",
+            image:"",
+            answers:[0,3,4]
+            },
+            {
+            question:"2. 自分で集めるデータの種類（複数選択可）",
+            image:"",
+            answers:[1,2]
+            }
+            ]
+            },
+        
+            {
+            title:"大問15 尺度とデータ（選択問題）",
+            type:"CH",
+        
+            wordbank:[
+            "1. 質的データ",
+            "2. 量的データ"
+            ],
+        
+            questions:[
+            {
+            question:"1. 名義尺度は何データになるか？",
+            image:"",
+            answer:0
+            },
+            {
+            question:"2. 比例尺度は何データになるか？",
+            image:"",
+            answer:1
+            },
+            {
+            question:"3. 順序尺度は何データになるか？",
+            image:"",
+            answer:0
+            },
+            {
+            question:"4. 間隔尺度は何データになるか？",
+            image:"",
+            answer:1
+            }
+            ]
+            },
+        
+            {
+            title:"大問16 データベースの問題点（チェックボックス）※画像問題",
+            type:"CB",
+        
+            wordbank:[
+            "1. データが並んでいない",
+            "2. データの平均がない",
+            "3. データの形式が異なっている",
+            "4. 文字列のデータがある",
+            "5. 外れ値（他の値と大きく異なる値）がある",
+            "6. 欠損値が空白である"
+            ],
+        
+            questions:[
+            {
+            question:"【画像問題】大きなデータベースの表の画像を参照。このデータベースのどこが悪いでしょうか？（複数選択可）",
+            image:"db2.jpg",
+            answers:[2,3,4,5]
+            }
+            ]
+            }
+        
+            ];
+
+        // ---- 状態 ----
+        let correctCount = 0;
+        let totalCount = 0;
+
+        // エラーをページ上に表示する（デバッグ用）
+        function showError(e) {
+            const area = document.getElementById('errorArea');
+            if (!area) return;
+            const box = document.createElement('div');
+            box.className = 'errorBox';
+            box.textContent = 'スクリプト実行でエラーが発生しました: ' + (e && e.message ? e.message : String(e));
+            area.appendChild(box);
+            console.error(e);
+        }
+
+        function updateScore() {
+            let totalQ = 0;
+            quizData.forEach(major => { totalQ += major.questions.length; });
+            const accuracy = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
+            // iOSでの表示更新を確実にするため
+            document.getElementById("accuracy").innerText = "正解率: " + accuracy + "%";
+            document.getElementById("score").innerText = "正解数: " + correctCount + " / " + totalQ;
+        }
+
+        function scrollNext(i) {
+            try {
+                if (!document.getElementById("scrollToggle").checked) return;
+                const next = document.getElementById("minor-" + (i + 1));
+                if (next) next.scrollIntoView({ behavior: "smooth", block: "center" });
+            } catch (e) {
+                // 無視して進める
+                console.warn(e);
+            }
+        }
+
+        function createQuiz() {
+            try {
+                const container = document.getElementById("quiz-container");
+                if (!container) return;
+                container.innerHTML = "";
+                let globalIndex = 0;
+
+                quizData.forEach(major => {
+                    const majorDiv = document.createElement("div");
+                    majorDiv.className = "major";
+
+                    const title = document.createElement("h3");
+                    title.textContent = major.title || "";
+                    majorDiv.appendChild(title);
+
+                    if (Array.isArray(major.wordbank) && major.wordbank.length > 0) {
+                        const bank = document.createElement("div");
+                        bank.className = "wordbank";
+                        const bTitle = document.createElement("div");
+                        bTitle.className = "wordbank-title";
+                        bTitle.textContent = "語群";
+                        bank.appendChild(bTitle);
+                        major.wordbank.forEach(w => {
+                            const span = document.createElement("span");
+                            span.textContent = w;
+                            bank.appendChild(span);
+                        });
+                        majorDiv.appendChild(bank);
+                    }
+
+                    if (!Array.isArray(major.questions)) major.questions = [];
+
+                    major.questions.forEach(q => {
+                        const minor = document.createElement("div");
+                        minor.className = "minor";
+                        minor.id = "minor-" + globalIndex;
+
+                        const qTitle = document.createElement("h4");
+                        qTitle.textContent = q.question || "";
+                        minor.appendChild(qTitle);
+
+                        const result = document.createElement("div");
+                        result.className = "result";
+
+                        // チェックボックス（CB）
+                        if (major.type === "CB") {
+                            if (!Array.isArray(major.wordbank)) major.wordbank = [];
+                            major.wordbank.forEach((opt, i) => {
+                                const lbl = document.createElement("label");
+                                const inp = document.createElement("input");
+                                inp.type = "checkbox";
+                                inp.value = i;
+                                lbl.appendChild(inp);
+                                lbl.append(" " + opt);
+                                minor.appendChild(lbl);
+                            });
+                            const btn = document.createElement("button");
+                            btn.textContent = "答え合わせ";
+                            const currentIndex = globalIndex;
+                            btn.onclick = () => {
+                                try {
+                                    const checked = [];
+                                    minor.querySelectorAll("input:checked").forEach(i => checked.push(Number(i.value)));
+                                    const expected = Array.isArray(q.answers) ? q.answers : [];
+                                    const ok = checked.length === expected.length && checked.every(v => expected.includes(v));
+                                    if (ok) {
+                                        result.textContent = "正解！";
+                                        correctCount++;
+                                        scrollNext(currentIndex);
+                                    } else {
+                                        result.textContent = "不正解";
+                                    }
+                                    totalCount++;
+                                    updateScore();
+                                } catch (e) { showError(e); }
+                            };
+                            minor.appendChild(btn);
+
+                        // 選択（CH）
+                        } else if (major.type === "CH") {
+                            const sel = document.createElement("select");
+                            const def = document.createElement("option");
+                            def.textContent = "選択してね！";
+                            def.value = "";
+                            def.selected = true;
+                            sel.appendChild(def);
+                            if (Array.isArray(major.wordbank)) {
+                                major.wordbank.forEach((opt, i) => {
+                                    const o = document.createElement("option");
+                                    o.value = i;
+                                    o.textContent = opt;
+                                    sel.appendChild(o);
+                                });
+                            }
+                            minor.appendChild(sel);
+
+                            const btn = document.createElement("button");
+                            btn.textContent = "答え合わせ";
+                            const currentIndex = globalIndex;
+                            btn.onclick = () => {
+                                try {
+                                    if (sel.value === "") {
+                                        result.textContent = "選択してね！";
+                                        return;
+                                    }
+                                    const selIndex = Number(sel.value);
+                                    if (selIndex === q.answer) {
+                                        result.textContent = "正解！";
+                                        correctCount++;
+                                        scrollNext(currentIndex);
+                                    } else {
+                                        result.textContent = "不正解";
+                                    }
+                                    totalCount++;
+                                    updateScore();
+                                } catch (e) { showError(e); }
+                            };
+                            minor.appendChild(btn);
+
+                        // OX
+                        } else if (major.type === "OX") {
+                            const box = document.createElement("div");
+                            box.className = "truefalse-container";
+                            const btnO = document.createElement("button");
+                            btnO.textContent = "⭕";
+                            const btnX = document.createElement("button");
+                            btnX.textContent = "❌";
+                            const currentIndex = globalIndex;
+                            btnO.onclick = () => {
+                                try {
+                                    if (q.answer === true) { result.textContent = "正解！"; correctCount++; scrollNext(currentIndex); }
+                                    else { result.textContent = "不正解"; }
+                                    totalCount++; updateScore();
+                                } catch (e) { showError(e); }
+                            };
+                            btnX.onclick = () => {
+                                try {
+                                    if (q.answer === false) { result.textContent = "正解！"; correctCount++; scrollNext(currentIndex); }
+                                    else { result.textContent = "不正解"; }
+                                    totalCount++; updateScore();
+                                } catch (e) { showError(e); }
+                            };
+                            box.appendChild(btnO); box.appendChild(btnX);
+                            minor.appendChild(box);
+                        }
+
+                        minor.appendChild(result);
+                        majorDiv.appendChild(minor);
+                        globalIndex++;
+                    });
+
+                    container.appendChild(majorDiv);
+                });
+
+                updateScore();
+            } catch (e) {
+                showError(e);
+            }
+        }
+
+        // DOM が使えるようになってから確実に実行
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                createQuiz();
+            } catch (e) {
+                showError(e);
+            }
+        });
+    </script>
+</body>
+
+</html>
