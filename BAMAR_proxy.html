@@ -71,15 +71,13 @@
     #iframeOverlay {
       position: absolute; inset: 0; z-index: 10;
       background: transparent;
-      pointer-events: none;
-      touch-action: none;
+      display: none; /* デフォルトはiframe操作モード */
     }
+    /* 枠操作モード時は枠線表示 */
     #iframeOverlay.active {
-      pointer-events: all;
-      touch-action: none;
+      display: block;
       outline: 3px solid #60a5fa;
       outline-offset: -3px;
-      cursor: not-allowed;
     }
 
     .loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.78); backdrop-filter: blur(4px); font-size: 0.95rem; color: var(--text); z-index: 20; }
@@ -101,7 +99,7 @@
     <section class="card header">
       <div class="titleRow">
         <div>
-          <h1>BAMAR</h1>
+          <h1>BAMAR -- バーマル</h1>
           <p class="sub">自動ルビ振りサイト！ドメインが qtesから続き、.xyz で終わるURLをペーストすると、判明している文字は自動的にルビが振られるよっ。</p>
         </div>
         <div class="badge">Mobile first</div>
@@ -160,21 +158,30 @@
       <aside class="sideGrid">
         <section class="card section">
           <h2>辞書アップロードの場所</h2>
-          <p class="note">ここに辞書をアップロード txt、js拡張子のファイルをアップロードするか、LUD辞書のリンクを貼り付けてください。</p>
-          <div class="placeholderBox">
-            ここは表には見える案内だけ置いておいて、<br />
-            裏であとから辞書や変換ルールを差し込めるようにしておく場所。
+          <p class="note">jsファイルをアップロードするか、LUD辞書のURLを入力してください。</p>
+
+          <!-- ファイルアップロード -->
+          <input type="file" id="dictFileInput" accept=".js" style="display:none;" />
+          <button class="secondary" id="dictUploadBtn" type="button">📂 辞書ファイルを選択（.jsのみ）</button>
+          <div id="dictFileStatus" style="font-size:0.82rem;color:#64748b;min-height:1.2em;"></div>
+
+          <!-- LUD辞書URL -->
+          <div class="field">
+            <label for="ludUrlInput">LUD辞書URL（ライブアップロード辞書）</label>
+            <div class="inputWrap">
+              <input id="ludUrlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://example.com/dict.js" />
+              <button id="ludPasteBtn" class="pasteInline secondary" type="button">ペースト</button>
+            </div>
           </div>
-          <div class="pillList">
-            <span class="pill">辞書アップロード</span>
-            <span class="pill">js拡張</span>
-            <span class="pill">LUD辞書リンク(更新辞書リンク)</span>
-          </div>
-          <button class="secondary" type="button">アップロード枠を作る</button>
+          <button class="primary" id="ludLoadBtn" type="button">LUD辞書を読み込む</button>
+          <div id="ludStatus" style="font-size:0.82rem;color:#64748b;min-height:1.2em;"></div>
         </section>
         <section class="card section">
           <h2>今できること</h2>
-          <p class="note">URLを入力して開くと、プロキシ経由でルビ拡張が自動で効くよ！文字を1.2秒ホバーするとルビ入力モーダルが出るっ。</p>
+          <p class="note">URLを入力して開くと、プロキシ経由でルビ拡張が自動で効くよ！<br /><br />
+            通常の文字なら文字をタップすると赤い背景が出るので3秒待つとルビを追加出来るポップアップが出ます。<br /><br />
+            リンクが設定されていて、押すと別ページに飛んでしまうものは長押ししてください。
+          </p>
         </section>
       </aside>
     </div>
@@ -217,19 +224,9 @@
     modeToggleBtn.addEventListener('click', function() {
       iframeMode = !iframeMode;
       modeToggleBtn.classList.toggle('iframe-on', iframeMode);
-      modeToggleLabel.textContent = iframeMode ? 'ブラウザ操作中' : 'サイト操作中';
+      modeToggleLabel.textContent = iframeMode ? 'iframe操作中' : '枠サイト操作中';
       // オーバーレイで iframe へのタッチ/クリックをブロック
       iframeOverlay.classList.toggle('active', !iframeMode);
-      // タッチイベントも明示的に止める
-      if (!iframeMode) {
-        iframeOverlay.addEventListener('touchstart', eatTouch, {passive: false});
-        iframeOverlay.addEventListener('touchmove',  eatTouch, {passive: false});
-        iframeOverlay.addEventListener('touchend',   eatTouch, {passive: false});
-      } else {
-        iframeOverlay.removeEventListener('touchstart', eatTouch);
-        iframeOverlay.removeEventListener('touchmove',  eatTouch);
-        iframeOverlay.removeEventListener('touchend',   eatTouch);
-      }
     });
 
     // ---- URL操作 ----
@@ -295,7 +292,87 @@
     loadingOverlay.classList.remove('show');
     applyFrameHeight();
 
-    function eatTouch(e) { e.preventDefault(); e.stopPropagation(); }
+    // ============================================================
+    //  辞書機能
+    // ============================================================
+    function getRubyData() {
+      try { var s = localStorage.getItem('rubyData_bamar'); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+    }
+    function setRubyData(data) {
+      try { localStorage.setItem('rubyData_bamar', JSON.stringify(data)); } catch(e) {}
+    }
+    function parseDictSrc(src) {
+      var parsed = null;
+      try { parsed = JSON.parse(src); } catch(_) {}
+      if (!parsed) {
+        var match = src.match(/(?:module\.exports|exports|const\s+\w+|let\s+\w+|var\s+\w+)\s*=\s*(\{[\s\S]*?\})\s*;?/);
+        if (match) { try { parsed = JSON.parse(match[1]); } catch(_) {} }
+      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('形式が読み取れなかったよ');
+      return parsed.entries || parsed;
+    }
+
+    // ---- ファイルアップロード ----
+    var dictFileInput  = document.getElementById('dictFileInput');
+    var dictUploadBtn  = document.getElementById('dictUploadBtn');
+    var dictFileStatus = document.getElementById('dictFileStatus');
+
+    dictUploadBtn.addEventListener('click', function() { dictFileInput.click(); });
+    dictFileInput.addEventListener('change', function() {
+      var file = dictFileInput.files[0];
+      if (!file) return;
+      if (!file.name.endsWith('.js')) {
+        dictFileStatus.textContent = '❌ .jsファイルだけ読み込めるよ！';
+        dictFileStatus.style.color = '#b91c1c';
+        dictFileInput.value = ''; return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var entries = parseDictSrc(e.target.result);
+          var merged = Object.assign({}, getRubyData(), entries);
+          setRubyData(merged);
+          dictFileStatus.textContent = '✓ ' + Object.keys(entries).length + '件の辞書を読み込んだよ！';
+          dictFileStatus.style.color = '#15803d';
+        } catch(err) {
+          dictFileStatus.textContent = '❌ 読み込み失敗: ' + err.message;
+          dictFileStatus.style.color = '#b91c1c';
+        }
+        dictFileInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+
+    // ---- LUD辞書URL ----
+    var ludUrlInput = document.getElementById('ludUrlInput');
+    var ludPasteBtn = document.getElementById('ludPasteBtn');
+    var ludLoadBtn  = document.getElementById('ludLoadBtn');
+    var ludStatus   = document.getElementById('ludStatus');
+
+    ludPasteBtn.addEventListener('click', async function() {
+      try {
+        var text = await navigator.clipboard.readText();
+        if (text) { ludUrlInput.value = text.trim(); }
+        else { ludStatus.textContent = 'クリップボードが空っぽみたい。'; }
+      } catch(e) { ludStatus.textContent = '手動で貼ってみてね。'; }
+    });
+    ludLoadBtn.addEventListener('click', async function() {
+      var url = ludUrlInput.value.trim();
+      if (!url) { ludStatus.textContent = '❌ URLを入れてね！'; ludStatus.style.color = '#b91c1c'; return; }
+      ludStatus.textContent = '読み込み中…'; ludStatus.style.color = '#64748b';
+      try {
+        var res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var entries = parseDictSrc(await res.text());
+        var merged = Object.assign({}, getRubyData(), entries);
+        setRubyData(merged);
+        ludStatus.textContent = '✓ ' + Object.keys(entries).length + '件のLUD辞書を読み込んだよ！';
+        ludStatus.style.color = '#15803d';
+      } catch(err) {
+        ludStatus.textContent = '❌ 失敗: ' + err.message;
+        ludStatus.style.color = '#b91c1c';
+      }
+    });
   </script>
 </body>
 </html>
