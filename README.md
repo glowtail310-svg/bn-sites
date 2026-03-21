@@ -8,4 +8,4 @@
 
 devメモ
 top(index.html) URL:
-https://glowtail310-svg.github.io.bn-site/
+https://glowtail310-svg.github.io/bn-site/
