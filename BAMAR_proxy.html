@@ -71,13 +71,15 @@
     #iframeOverlay {
       position: absolute; inset: 0; z-index: 10;
       background: transparent;
-      display: none; /* デフォルトはiframe操作モード */
+      pointer-events: none;
+      touch-action: none;
     }
-    /* 枠操作モード時は枠線表示 */
     #iframeOverlay.active {
-      display: block;
+      pointer-events: all;
+      touch-action: none;
       outline: 3px solid #60a5fa;
       outline-offset: -3px;
+      cursor: not-allowed;
     }
 
     .loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.78); backdrop-filter: blur(4px); font-size: 0.95rem; color: var(--text); z-index: 20; }
@@ -218,6 +220,16 @@
       modeToggleLabel.textContent = iframeMode ? 'iframe操作中' : '枠サイト操作中';
       // オーバーレイで iframe へのタッチ/クリックをブロック
       iframeOverlay.classList.toggle('active', !iframeMode);
+      // タッチイベントも明示的に止める
+      if (!iframeMode) {
+        iframeOverlay.addEventListener('touchstart', eatTouch, {passive: false});
+        iframeOverlay.addEventListener('touchmove',  eatTouch, {passive: false});
+        iframeOverlay.addEventListener('touchend',   eatTouch, {passive: false});
+      } else {
+        iframeOverlay.removeEventListener('touchstart', eatTouch);
+        iframeOverlay.removeEventListener('touchmove',  eatTouch);
+        iframeOverlay.removeEventListener('touchend',   eatTouch);
+      }
     });
 
     // ---- URL操作 ----
@@ -282,6 +294,8 @@
     window.addEventListener('resize', applyFrameHeight);
     loadingOverlay.classList.remove('show');
     applyFrameHeight();
+
+    function eatTouch(e) { e.preventDefault(); e.stopPropagation(); }
   </script>
 </body>
 </html>
