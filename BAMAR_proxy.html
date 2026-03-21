@@ -37,17 +37,50 @@
     .primary { background: var(--accent); color: white; }
     .secondary { background: var(--soft); color: var(--text); border: 1px solid var(--line); }
     .dangerText { color: #b91c1c; font-size: 0.9rem; min-height: 1.2em; }
-    .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-    .pillList { display: flex; gap: 8px; flex-wrap: wrap; }
-    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); font-size: 0.82rem; color: var(--text); }
+    .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* トグルボタン共通 */
+    .toggleBtn {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 36px; padding: 0 14px; border-radius: 999px;
+      font-size: 0.82rem; font-weight: 700;
+      border: 2px solid var(--line); background: var(--soft); color: var(--muted);
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .toggleBtn .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #cbd5e1; transition: background 0.2s; flex-shrink: 0;
+    }
+    /* ルビON */
+    .toggleBtn.ruby-on { background: #fff1f1; border-color: #ff6b6b; color: #cc3333; }
+    .toggleBtn.ruby-on .dot { background: #ff6b6b; }
+    /* iframe操作モードON */
+    .toggleBtn.iframe-on { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+    .toggleBtn.iframe-on .dot { background: #60a5fa; }
+
     .viewerCard { display: grid; gap: 0; }
     .viewerHead { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
     .viewerTitle { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .viewerTitleLeft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .viewerTitleLeft { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .urlText { font-size: 0.82rem; color: var(--muted); word-break: break-all; line-height: 1.5; }
+
     .viewer { position: relative; width: 100%; height: 100%; background: #e2e8f0; }
     iframe { width: 100%; height: 100%; border: 0; display: block; background: white; }
-    .loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.78); backdrop-filter: blur(4px); font-size: 0.95rem; color: var(--text); z-index: 2; }
+
+    /* iframeオーバーレイ（枠操作モード時にiframeをブロック） */
+    #iframeOverlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: transparent;
+      display: none; /* デフォルトはiframe操作モード */
+    }
+    /* 枠操作モード時は枠線表示 */
+    #iframeOverlay.active {
+      display: block;
+      outline: 3px solid #60a5fa;
+      outline-offset: -3px;
+    }
+
+    .loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.78); backdrop-filter: blur(4px); font-size: 0.95rem; color: var(--text); z-index: 20; }
     .loading.show { display: flex; }
     .loadingBox { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 999px; background: white; border: 1px solid var(--line); box-shadow: var(--shadow); }
     .spinner { width: 16px; height: 16px; border: 2px solid #cbd5e1; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -57,8 +90,6 @@
     .section h2 { margin: 0; font-size: 1rem; }
     .note { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.6; }
     .placeholderBox { border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 18px; padding: 14px; color: #475569; font-size: 0.92rem; line-height: 1.6; }
-    .proxyBadge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; border: 1px solid #86efac; background: #f0fdf4; color: #15803d; }
-    .proxyBadge .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
     @media (min-width: 920px) { .layout { display: grid; grid-template-columns: 1.5fr 0.95fr; gap: 12px; align-items: start; } }
     @media (max-width: 919px) { .btnRow { width: 100%; justify-content: stretch; } .btnRow button { flex: 1 1 0; } .actionRow .wide { flex: 1 1 100%; } }
   </style>
@@ -90,10 +121,16 @@
         </div>
         <div id="errorText" class="dangerText"></div>
         <div class="tools">
-          <div class="pillList">
-            <span class="pill" id="proxyModePill">🔄 プロキシ経由</span>
-          </div>
-          <span class="proxyBadge"><span class="dot"></span>ルビ自動注入 ON</span>
+          <!-- ルビ ON/OFF -->
+          <button id="rubyToggleBtn" class="toggleBtn ruby-on" type="button">
+            <span class="dot"></span>
+            <span id="rubyToggleLabel">ルビ ON</span>
+          </button>
+          <!-- 操作モード切り替え -->
+          <button id="modeToggleBtn" class="toggleBtn iframe-on" type="button">
+            <span class="dot"></span>
+            <span id="modeToggleLabel">iframe操作中</span>
+          </button>
         </div>
       </div>
     </section>
@@ -110,6 +147,7 @@
           <div class="urlText">現在のURL: <span id="currentUrlText">（URLを入力して開くボタンを押してね）</span></div>
         </div>
         <div class="viewer" id="viewerWrap">
+          <div id="iframeOverlay"></div>
           <div class="loading" id="loadingOverlay">
             <div class="loadingBox"><span class="spinner"></span><span>読み込み中…</span></div>
           </div>
@@ -143,19 +181,46 @@
   <script>
     var PROXY_BASE = "https://amarbrowser.glowtail310.workers.dev/proxy?url=";
 
-    var urlInput      = document.getElementById('urlInput');
-    var openBtn       = document.getElementById('openBtn');
-    var pasteBtn      = document.getElementById('pasteBtn');
-    var externalBtn   = document.getElementById('externalBtn');
-    var reloadBtn     = document.getElementById('reloadBtn');
-    var iframe        = document.getElementById('pageFrame');
-    var loadingOverlay= document.getElementById('loadingOverlay');
-    var errorText     = document.getElementById('errorText');
-    var currentUrlText= document.getElementById('currentUrlText');
-    var statusBadge   = document.getElementById('statusBadge');
-    var viewerWrap    = document.getElementById('viewerWrap');
-    var currentUrl    = '';
+    var urlInput       = document.getElementById('urlInput');
+    var openBtn        = document.getElementById('openBtn');
+    var pasteBtn       = document.getElementById('pasteBtn');
+    var externalBtn    = document.getElementById('externalBtn');
+    var reloadBtn      = document.getElementById('reloadBtn');
+    var iframe         = document.getElementById('pageFrame');
+    var loadingOverlay = document.getElementById('loadingOverlay');
+    var errorText      = document.getElementById('errorText');
+    var currentUrlText = document.getElementById('currentUrlText');
+    var statusBadge    = document.getElementById('statusBadge');
+    var viewerWrap     = document.getElementById('viewerWrap');
+    var iframeOverlay  = document.getElementById('iframeOverlay');
+    var currentUrl     = '';
 
+    // ---- ルビON/OFF ----
+    var rubyEnabled = true;
+    var rubyToggleBtn   = document.getElementById('rubyToggleBtn');
+    var rubyToggleLabel = document.getElementById('rubyToggleLabel');
+    rubyToggleBtn.addEventListener('click', function() {
+      rubyEnabled = !rubyEnabled;
+      rubyToggleBtn.classList.toggle('ruby-on', rubyEnabled);
+      rubyToggleLabel.textContent = rubyEnabled ? 'ルビ ON' : 'ルビ OFF';
+      // 今開いてるURLを再読み込み
+      if (currentUrl) loadUrl(currentUrl);
+    });
+
+    // ---- 操作モード切り替え ----
+    // true = iframeが操作を受け付ける / false = 枠サイトが操作を受け付ける
+    var iframeMode = true;
+    var modeToggleBtn   = document.getElementById('modeToggleBtn');
+    var modeToggleLabel = document.getElementById('modeToggleLabel');
+    modeToggleBtn.addEventListener('click', function() {
+      iframeMode = !iframeMode;
+      modeToggleBtn.classList.toggle('iframe-on', iframeMode);
+      modeToggleLabel.textContent = iframeMode ? 'iframe操作中' : '枠サイト操作中';
+      // オーバーレイで iframe へのタッチ/クリックをブロック
+      iframeOverlay.classList.toggle('active', !iframeMode);
+    });
+
+    // ---- URL操作 ----
     function normalizeUrl(raw) {
       var value = String(raw || '').trim();
       if (!value) return '';
@@ -171,11 +236,17 @@
     function applyFrameHeight() {
       var isMobile = window.innerWidth < 920;
       var viewport = window.innerHeight;
-      var headerHeight = document.querySelector('.header').getBoundingClientRect().height;
+      var headerH = document.querySelector('.header').getBoundingClientRect().height;
       var height = isMobile
         ? Math.max(560, Math.round(viewport * 0.72))
-        : Math.max(680, Math.round(viewport - headerHeight - 32));
+        : Math.max(680, Math.round(viewport - headerH - 32));
       viewerWrap.style.height = height + 'px';
+    }
+    function loadUrl(url) {
+      setLoading(true);
+      var proxyUrl = PROXY_BASE + encodeURIComponent(url);
+      if (!rubyEnabled) proxyUrl += '&noruby=1';
+      iframe.src = proxyUrl;
     }
     function openUrl() {
       var next = normalizeUrl(urlInput.value);
@@ -188,24 +259,13 @@
         currentUrl = parsed.toString();
         currentUrlText.textContent = currentUrl;
         setError('');
-        setLoading(true);
-        // プロキシ経由でiframeに読み込む
-        iframe.src = PROXY_BASE + encodeURIComponent(currentUrl);
+        loadUrl(currentUrl);
       } catch(e) { setError('URLの形を確認してね。'); }
-    }
-    function reloadFrame() {
-      if (!currentUrl) return;
-      setLoading(true);
-      statusBadge.textContent = '再読み込み中…';
-      iframe.src = PROXY_BASE + encodeURIComponent(currentUrl);
-    }
-    function openExternal() {
-      if (currentUrl) window.open(currentUrl, '_blank', 'noopener,noreferrer');
     }
 
     openBtn.addEventListener('click', openUrl);
-    reloadBtn.addEventListener('click', reloadFrame);
-    externalBtn.addEventListener('click', openExternal);
+    reloadBtn.addEventListener('click', function() { if (currentUrl) loadUrl(currentUrl); });
+    externalBtn.addEventListener('click', function() { if (currentUrl) window.open(currentUrl, '_blank', 'noopener,noreferrer'); });
     pasteBtn.addEventListener('click', async function() {
       try {
         var text = await navigator.clipboard.readText();
