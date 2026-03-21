@@ -7,5 +7,11 @@
 
 
 devメモ
-top(index.html) URL:
-https://glowtail310-svg.github.io/bn-site/
+top(index.html):
+https://glowtail310-svg.github.io/bn-sites
+
+2603:final-exam 情報I:
+/2603jouhou.html
+
+BAMAR:
+/BAMAR.html
