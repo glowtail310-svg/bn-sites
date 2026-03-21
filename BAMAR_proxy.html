@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>OCK-BAMAR</title>
+  <style>
+    :root {
+      --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b;
+      --line: #e2e8f0; --accent: #0f172a; --soft: #f1f5f9;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08); --radius: 24px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; }
+    .wrap { width: min(1100px, 100%); margin: 0 auto; padding: 12px; display: grid; gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .header { padding: 16px; display: grid; gap: 12px; }
+    .titleRow { display: flex; justify-content: space-between; gap: 12px; align-items: start; flex-wrap: wrap; }
+    h1 { font-size: 1.25rem; margin: 0; line-height: 1.2; }
+    .sub { margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: var(--soft); color: var(--text); border: 1px solid var(--line); font-size: 0.82rem; white-space: nowrap; }
+    .grid { display: grid; gap: 12px; }
+    .inputRow { display: grid; grid-template-columns: 1fr; gap: 10px; align-items: end; }
+    .field { display: grid; gap: 8px; position: relative; }
+    label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    input[type="url"], input[type="text"] { width: 100%; height: 48px; border-radius: 16px; border: 1px solid var(--line); background: #fff; padding: 0 14px; font-size: 1rem; outline: none; }
+    .inputWrap { position: relative; }
+    .inputWrap input { padding-right: 88px; }
+    .pasteInline { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); height: 36px; padding: 0 14px; border-radius: 12px; font-size: 0.9rem; }
+    input[type="url"]:focus, input[type="text"]:focus { border-color: #94a3b8; box-shadow: 0 0 0 4px rgba(148,163,184,0.18); }
+    .btnRow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .actionRow .primary, .actionRow .secondary { flex: 1 1 0; }
+    .actionRow .wide { flex: 2 1 180px; }
+    button { border: none; cursor: pointer; height: 48px; padding: 0 16px; border-radius: 16px; font-size: 0.96rem; font-weight: 700; transition: transform 0.05s ease, opacity 0.2s ease, background 0.2s ease; }
+    button:active { transform: translateY(1px); }
+    .primary { background: var(--accent); color: white; }
+    .secondary { background: var(--soft); color: var(--text); border: 1px solid var(--line); }
+    .dangerText { color: #b91c1c; font-size: 0.9rem; min-height: 1.2em; }
+    .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .pillList { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); font-size: 0.82rem; color: var(--text); }
+    .viewerCard { display: grid; gap: 0; }
+    .viewerHead { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .viewerTitle { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .viewerTitleLeft { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .urlText { font-size: 0.82rem; color: var(--muted); word-break: break-all; line-height: 1.5; }
+    .viewer { position: relative; width: 100%; height: 100%; background: #e2e8f0; }
+    iframe { width: 100%; height: 100%; border: 0; display: block; background: white; }
+    .loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.78); backdrop-filter: blur(4px); font-size: 0.95rem; color: var(--text); z-index: 2; }
+    .loading.show { display: flex; }
+    .loadingBox { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 999px; background: white; border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .spinner { width: 16px; height: 16px; border: 2px solid #cbd5e1; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sideGrid { display: grid; gap: 12px; }
+    .section { padding: 16px; display: grid; gap: 12px; }
+    .section h2 { margin: 0; font-size: 1rem; }
+    .note { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.6; }
+    .placeholderBox { border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 18px; padding: 14px; color: #475569; font-size: 0.92rem; line-height: 1.6; }
+    .proxyBadge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; border: 1px solid #86efac; background: #f0fdf4; color: #15803d; }
+    .proxyBadge .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+    @media (min-width: 920px) { .layout { display: grid; grid-template-columns: 1.5fr 0.95fr; gap: 12px; align-items: start; } }
+    @media (max-width: 919px) { .btnRow { width: 100%; justify-content: stretch; } .btnRow button { flex: 1 1 0; } .actionRow .wide { flex: 1 1 100%; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card header">
+      <div class="titleRow">
+        <div>
+          <h1>BAMAR -- バーマル</h1>
+          <p class="sub">自動ルビ振りサイト！ドメインが qtesから続き、.xyz で終わるURLをペーストすると、判明している文字は自動的にルビが振られるよっ。</p>
+        </div>
+        <div class="badge">Mobile first</div>
+      </div>
+      <div class="grid">
+        <div class="inputRow">
+          <div class="field">
+            <label for="urlInput">サイトのURL</label>
+            <div class="inputWrap">
+              <input id="urlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://example.com" />
+              <button id="pasteBtn" class="pasteInline secondary" type="button">ペースト</button>
+            </div>
+          </div>
+          <div class="btnRow actionRow">
+            <button id="openBtn" class="primary" type="button">開く</button>
+            <button id="externalBtn" class="secondary" type="button">別タブ</button>
+            <button id="reloadBtn" class="secondary wide" type="button">更新</button>
+          </div>
+        </div>
+        <div id="errorText" class="dangerText"></div>
+        <div class="tools">
+          <div class="pillList">
+            <span class="pill" id="proxyModePill">🔄 プロキシ経由</span>
+          </div>
+          <span class="proxyBadge"><span class="dot"></span>ルビ自動注入 ON</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card viewerCard">
+        <div class="viewerHead">
+          <div class="viewerTitle">
+            <div class="viewerTitleLeft">
+              <h2 style="margin:0;font-size:1rem;">ページ内ブラウザ</h2>
+            </div>
+            <div class="badge" id="statusBadge">待機中</div>
+          </div>
+          <div class="urlText">現在のURL: <span id="currentUrlText">（URLを入力して開くボタンを押してね）</span></div>
+        </div>
+        <div class="viewer" id="viewerWrap">
+          <div class="loading" id="loadingOverlay">
+            <div class="loadingBox"><span class="spinner"></span><span>読み込み中…</span></div>
+          </div>
+          <iframe id="pageFrame" src="about:blank" title="page-browser" referrerpolicy="no-referrer"></iframe>
+        </div>
+      </section>
+
+      <aside class="sideGrid">
+        <section class="card section">
+          <h2>辞書アップロードの場所</h2>
+          <p class="note">ここに辞書をアップロード txt、js拡張子のファイルをアップロードするか、LUD辞書のリンクを貼り付けてください。</p>
+          <div class="placeholderBox">
+            ここは表には見える案内だけ置いておいて、<br />
+            裏であとから辞書や変換ルールを差し込めるようにしておく場所。
+          </div>
+          <div class="pillList">
+            <span class="pill">辞書アップロード</span>
+            <span class="pill">js拡張</span>
+            <span class="pill">LUD辞書リンク(更新辞書リンク)</span>
+          </div>
+          <button class="secondary" type="button">アップロード枠を作る</button>
+        </section>
+        <section class="card section">
+          <h2>今できること</h2>
+          <p class="note">URLを入力して開くと、プロキシ経由でルビ拡張が自動で効くよ！文字を1.2秒ホバーするとルビ入力モーダルが出るっ。</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    var PROXY_BASE = "https://amarbrowser.glowtail310.workers.dev/proxy?url=";
+
+    var urlInput      = document.getElementById('urlInput');
+    var openBtn       = document.getElementById('openBtn');
+    var pasteBtn      = document.getElementById('pasteBtn');
+    var externalBtn   = document.getElementById('externalBtn');
+    var reloadBtn     = document.getElementById('reloadBtn');
+    var iframe        = document.getElementById('pageFrame');
+    var loadingOverlay= document.getElementById('loadingOverlay');
+    var errorText     = document.getElementById('errorText');
+    var currentUrlText= document.getElementById('currentUrlText');
+    var statusBadge   = document.getElementById('statusBadge');
+    var viewerWrap    = document.getElementById('viewerWrap');
+    var currentUrl    = '';
+
+    function normalizeUrl(raw) {
+      var value = String(raw || '').trim();
+      if (!value) return '';
+      if (/^https?:\/\//i.test(value)) return value;
+      if (/^\/\//.test(value)) return 'https:' + value;
+      return 'https://' + value;
+    }
+    function setLoading(on) {
+      loadingOverlay.classList.toggle('show', on);
+      statusBadge.textContent = on ? '読み込み中…' : '表示中';
+    }
+    function setError(msg) { errorText.textContent = msg || ''; }
+    function applyFrameHeight() {
+      var isMobile = window.innerWidth < 920;
+      var viewport = window.innerHeight;
+      var headerHeight = document.querySelector('.header').getBoundingClientRect().height;
+      var height = isMobile
+        ? Math.max(560, Math.round(viewport * 0.72))
+        : Math.max(680, Math.round(viewport - headerHeight - 32));
+      viewerWrap.style.height = height + 'px';
+    }
+    function openUrl() {
+      var next = normalizeUrl(urlInput.value);
+      if (!next) { setError('URLを入れてねっ！'); return; }
+      try {
+        var parsed = new URL(next);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          setError('http / https のURLだけ開けるよ。'); return;
+        }
+        currentUrl = parsed.toString();
+        currentUrlText.textContent = currentUrl;
+        setError('');
+        setLoading(true);
+        // プロキシ経由でiframeに読み込む
+        iframe.src = PROXY_BASE + encodeURIComponent(currentUrl);
+      } catch(e) { setError('URLの形を確認してね。'); }
+    }
+    function reloadFrame() {
+      if (!currentUrl) return;
+      setLoading(true);
+      statusBadge.textContent = '再読み込み中…';
+      iframe.src = PROXY_BASE + encodeURIComponent(currentUrl);
+    }
+    function openExternal() {
+      if (currentUrl) window.open(currentUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    openBtn.addEventListener('click', openUrl);
+    reloadBtn.addEventListener('click', reloadFrame);
+    externalBtn.addEventListener('click', openExternal);
+    pasteBtn.addEventListener('click', async function() {
+      try {
+        var text = await navigator.clipboard.readText();
+        if (!text) { setError('クリップボードが空っぽみたい。'); return; }
+        urlInput.value = text.trim(); setError('');
+      } catch(e) { setError('この端末では貼り付け取得が制限されているかも。手で貼ってみてね。'); }
+    });
+    urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') openUrl(); });
+    iframe.addEventListener('load', function() { setLoading(false); setError(''); statusBadge.textContent = '表示中'; });
+    iframe.addEventListener('error', function() {
+      setLoading(false); statusBadge.textContent = '読み込み失敗';
+      setError('読み込めなかったよ。別タブで開いてみてね。');
+    });
+    window.addEventListener('resize', applyFrameHeight);
+    loadingOverlay.classList.remove('show');
+    applyFrameHeight();
+  </script>
+</body>
+</html>
