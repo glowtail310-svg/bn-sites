@@ -163,7 +163,7 @@
           <p class="note">jsファイルをアップロードするか、LUD辞書のURLを入力してください。</p>
 
           <!-- ファイルアップロード -->
-          <input type="file" id="dictFileInput" accept=".js" style="display:none;" />
+          <input type="file" id="dictFileInput" accept=".js,.json" style="display:none;" />
           <button class="secondary" id="dictUploadBtn" type="button">📂 辞書ファイルを選択（.jsのみ）</button>
           <div id="dictFileStatus" style="font-size:0.82rem;color:#64748b;min-height:1.2em;"></div>
 
@@ -322,8 +322,8 @@
     dictFileInput.addEventListener('change', function() {
       var file = dictFileInput.files[0];
       if (!file) return;
-      if (!file.name.endsWith('.js')) {
-        dictFileStatus.textContent = '❌ .jsファイルだけ読み込めるよ！';
+      if (!file.name.endsWith('.js') && !file.name.endsWith('.json')) {
+  dictFileStatus.textContent = '❌ .jsか.jsonファイルだけ読み込めるよ！';
         dictFileStatus.style.color = '#b91c1c';
         dictFileInput.value = ''; return;
       }
