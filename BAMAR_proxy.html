@@ -285,13 +285,14 @@
     urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') openUrl(); });
 iframe.addEventListener('load', function() {
   setLoading(false); setError(''); statusBadge.textContent = '表示中';
-  // iframeのsrcからプロキシURLを外して実際のURLを取り出す
   try {
-    var src = iframe.src || '';
-    if (src.includes('proxy?url=')) {
-      var realUrl = decodeURIComponent(src.split('proxy?url=')[1].split('&')[0]);
+    var loc = iframe.contentWindow.location.href || '';
+    if (loc.includes('proxy?url=')) {
+      var realUrl = decodeURIComponent(loc.split('proxy?url=')[1].split('&')[0]);
       currentUrl = realUrl;
       currentUrlText.textContent = realUrl;
+    } else if (loc && loc !== 'about:blank') {
+      currentUrlText.textContent = loc;
     }
   } catch(e) {}
 });
