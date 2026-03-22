@@ -333,6 +333,8 @@
           var entries = parseDictSrc(e.target.result);
           var merged = Object.assign({}, getRubyData(), entries);
           setRubyData(merged);
+          // iframeに辞書を送る
+          iframe.contentWindow.postMessage({ type: 'rubyDataUpdate', data: merged }, '*');
           dictFileStatus.textContent = '✓ ' + Object.keys(entries).length + '件の辞書を読み込んだよ！';
           dictFileStatus.style.color = '#15803d';
         } catch(err) {
@@ -367,6 +369,8 @@
         var entries = parseDictSrc(await res.text());
         var merged = Object.assign({}, getRubyData(), entries);
         setRubyData(merged);
+        // iframeに辞書を送る
+        iframe.contentWindow.postMessage({ type: 'rubyDataUpdate', data: merged }, '*');
         ludStatus.textContent = '✓ ' + Object.keys(entries).length + '件のLUD辞書を読み込んだよ！';
         ludStatus.style.color = '#15803d';
       } catch(err) {
