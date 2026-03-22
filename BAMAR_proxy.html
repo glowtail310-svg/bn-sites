@@ -102,11 +102,22 @@
     <section class="card header">
       <div class="titleRow">
         <div>
-          <h1>BAMAR -- バーマル</h1>
+          <h1>BAMAR</h1>
+          <p class="sub" style="color:#94a3b8;font-size:0.82rem;margin:2px 0 6px;">Browser of AutoMatic Add Ruby</p>
           <p class="sub">自動ルビ振りサイト！ドメインが qtesから続き、.xyz で終わるURLをペーストすると、判明している文字は自動的にルビが振られるよっ。</p>
         </div>
-        <div class="badge">Mobile first</div>
       </div>
+
+      <!-- 注意書き -->
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:16px;padding:12px 16px;font-size:0.85rem;color:#92400e;line-height:1.7;">
+         ⚠️ <strong>読み込みについて</strong><br />
+         辞書ファイルのダウンロード・読み込みには時間がかかるよっっ。<br />
+         サイトの読み込み中はフリーズしちゃうけど、しばらく操作してると治る！不具合では無いよっ<br />
+        細かく言えば、最大30秒以内くらいには読み込めると思うから、しばらく待ってね！<br /><br />
+        🖤 <strong>黒い画面にエラーコード（4桁の数字）が出た場合</strong><br />
+        Cloudflareのサーバーが一時的にコケただけだよ！「更新」ボタンを押せば直るよっ。何度か押してもダメなら少し時間をおいてからもう一度試してみてね。
+      </div>
+
       <div class="grid">
         <div class="inputRow">
           <div class="field">
@@ -117,8 +128,8 @@
             </div>
           </div>
           <div class="btnRow actionRow">
-            <button id="openBtn" class="primary" type="button">開く</button>
-            <button id="externalBtn" class="secondary" type="button">別タブ</button>
+            <button id="openBtn" class="primary" type="button">開く⬇</button>
+            <button id="externalBtn" class="secondary" type="button">別タブ➡︎</button>
             <button id="reloadBtn" class="secondary wide" type="button">更新</button>
           </div>
         </div>
@@ -132,7 +143,7 @@
           <!-- ルビ追加 ON/OFF -->
           <button id="rubyAddToggleBtn" class="toggleBtn ruby-add-on" type="button">
             <span class="dot"></span>
-            <span id="rubyAddToggleLabel">追加 ON</span>
+            <span id="rubyAddToggleLabel">新規ルビ追加 ON</span>
           </button>
         </div>
       </div>
@@ -164,7 +175,7 @@
 
           <!-- ファイルアップロード -->
           <input type="file" id="dictFileInput" accept=".js,.json" style="display:none;" />
-          <button class="secondary" id="dictUploadBtn" type="button">📂 辞書ファイルを選択（.jsのみ）</button>
+          <button class="secondary" id="dictUploadBtn" type="button">📂 辞書ファイルを選択（.js , .jsonのみ）</button>
           <div id="dictFileStatus" style="font-size:0.82rem;color:#64748b;min-height:1.2em;"></div>
 
           <!-- LUD辞書URL -->
@@ -180,9 +191,11 @@
         </section>
         <section class="card section">
           <h2>今できること</h2>
-          <p class="note">URLを入力して開くと、プロキシ経由でルビ拡張が自動で効くよ！<br /><br />
+          <p class="note">
+            URLを入力して「開く⬇」を押すと、プロキシ経由でルビ拡張が自動で効くよ！<br /><br />
             通常の文字なら文字をタップすると赤い背景が出るので3秒待つとルビを追加出来るポップアップが出ます。<br /><br />
-            リンクが設定されていて、押すと別ページに飛んでしまうものは長押ししてください。
+            リンクが設定されていて、押すと別ページに飛んでしまうものは長押ししてください。<br /><br />
+            「新規ルビ追加 OFF」にするとタップしてもポップアップが出なくなるよ。閲覧専用モードとして使ってね！
           </p>
         </section>
       </aside>
@@ -225,7 +238,7 @@
     rubyAddToggleBtn.addEventListener('click', function() {
       rubyAddEnabled = !rubyAddEnabled;
       rubyAddToggleBtn.classList.toggle('ruby-add-on', rubyAddEnabled);
-      rubyAddToggleLabel.textContent = rubyAddEnabled ? '追加 ON' : '追加 OFF';
+      rubyAddToggleLabel.textContent = rubyAddEnabled ? '新規ルビ追加 ON' : '新規ルビ追加 OFF';
       if (currentUrl) loadUrl(currentUrl);
     });
 
@@ -293,6 +306,21 @@
     loadingOverlay.classList.remove('show');
     applyFrameHeight();
 
+    // Cloudflareエラーページ検知（黒背景エラー対策）
+try {
+  var doc = iframe.contentDocument;
+  if (doc && doc.title && /error|Error|\d{4}/.test(doc.title)) {
+    reloadBtn.style.background = '#ff6b6b';
+    reloadBtn.style.color = 'white';
+    reloadBtn.textContent = '⚠ 更新';
+    setTimeout(function() {
+      reloadBtn.style.background = '';
+      reloadBtn.style.color = '';
+      reloadBtn.textContent = '更新';
+    }, 8000);
+  }
+} catch(e) {}
+
     // ============================================================
     //  辞書機能
     // ============================================================
@@ -323,7 +351,7 @@
       var file = dictFileInput.files[0];
       if (!file) return;
       if (!file.name.endsWith('.js') && !file.name.endsWith('.json')) {
-  dictFileStatus.textContent = '❌ .jsか.jsonファイルだけ読み込めるよ！';
+        dictFileStatus.textContent = '❌ .jsか.jsonファイルだけ読み込めるよ！';
         dictFileStatus.style.color = '#b91c1c';
         dictFileInput.value = ''; return;
       }
@@ -333,8 +361,6 @@
           var entries = parseDictSrc(e.target.result);
           var merged = Object.assign({}, getRubyData(), entries);
           setRubyData(merged);
-          // iframeに辞書を送る
-          iframe.contentWindow.postMessage({ type: 'rubyDataUpdate', data: merged }, '*');
           dictFileStatus.textContent = '✓ ' + Object.keys(entries).length + '件の辞書を読み込んだよ！';
           dictFileStatus.style.color = '#15803d';
         } catch(err) {
@@ -369,8 +395,6 @@
         var entries = parseDictSrc(await res.text());
         var merged = Object.assign({}, getRubyData(), entries);
         setRubyData(merged);
-        // iframeに辞書を送る
-        iframe.contentWindow.postMessage({ type: 'rubyDataUpdate', data: merged }, '*');
         ludStatus.textContent = '✓ ' + Object.keys(entries).length + '件のLUD辞書を読み込んだよ！';
         ludStatus.style.color = '#15803d';
       } catch(err) {
