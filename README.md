@@ -2,7 +2,7 @@
 <html lang="JP">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" charset="UTF-8">
 </html>
-# bn-sites
+
 べにさけのサイト公開所
 
 これが見えているのであればエラー。
