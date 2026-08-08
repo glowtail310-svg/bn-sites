@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="JP">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" charset="UTF-8">
+    <style>
+        body { 
+          text-align: center; 
+          font-family: sans-serif; 
+          background: #222; 
+          color: #fff; 
+          margin: 0; 
+          touch-action: none;
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
+        #stats { font-size: 13px; margin: 5px; }
+        #target { font-size: 20px; color: #ffeb3b; margin: 3px; font-weight: bold; }
+        
+        /* ゲーム画面と右タブのレイアウト */
+        .game-wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          gap: 5px;
+          max-width: 600px;
+          width: 100%;
+          margin: 0 auto;
+          box-sizing: border-box;
+          padding: 0 5px;
+        }
+        canvas { 
+          background: #111; 
+          border: 2px solid #555; 
+          display: block; 
+          width: min(350px, 70vw);
+          height: min(350px, 70vw);
+        }
+        
+        /* 【修正後】右タブのスタイル */
+        .right-tab {
+          width: 120px; /* ★好みのサイズに広げる（例: 90px -> 120pxなど） */
+          background: #333;
+          border: 1px solid #555;
+          border-radius: 10px;
+          padding: 12px;
+          font-size: 14px; /* ★文字も少し大きくすると見やすいです */
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          box-sizing: border-box;
+          align-items: stretch; 
+          width: 100%; /* ※flexアイテムとして枠いっぱいに広げる場合 */
+          max-width: 130px; /* 広がりすぎない上限サイズ */
+        }
+        
+        .right-tab div {
+          width: 100%;            /* 横幅をタブいっぱいに使う */
+          word-break: break-all;  /* 幅に合わせて自然に折り返す */
+          text-align: center;     /* 中央揃えにする場合 */
+        }
+        
+        /* 【修正後】ボタンのスタイル */
+        .item-btn {
+          width: 100%; /* ★追加：右タブの横幅いっぱいに広げる */
+          background: #ff9800;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 2px;
+          font-size: 11px;
+          font-weight: bold;
+          cursor: pointer;
+          box-sizing: border-box; /* 枠線を含めてピッタリ収める */
+        }
+        
+        .item-btn:disabled {
+          background: #555;
+          color: #888;
+        }
+        
+        .controls { display: grid; grid-template-columns: repeat(3, 130px); gap: 10px; justify-content: center; margin-top: 90px; }
+        .btn { width: 130px; height: 130px; font-size: 80px; background: #444; color: #fff; border: none; border-radius: 8px; }
+    </style>
+</head>
+
+<body>
+
+    <div>
+        <p style="color:#555;" id="realtime">|||||||||||||||||||||||||</p>
+        <script type="text/javascript">
+            function twoDigit(num) {
+                  let ret;
+                  if( num < 10 ) 
+            	    ret = "0" + num; 
+                  else 
+               	    ret = num; 
+                  return ret;
+                }
+                function showClock() {
+                  let nowTime = new Date();
+                  let nowHour = twoDigit( nowTime.getHours() );
+                  let nowMin  = twoDigit( nowTime.getMinutes() );
+                  let nowSec  = twoDigit( nowTime.getSeconds() );
+                  let msg = "TIME   " + nowHour + ":" + nowMin + ":" + nowSec;
+                  document.getElementById("realtime").innerHTML = msg;
+                }
+                setInterval('showClock()',1000);
+        </script>
+    </div>
+
+    <div id="stats">
+        ライフ: <span id="hp">❤️❤️❤️❤️❤️</span><br>
+        レベル: <span id="level">1</span><br>
+        総集めた文字: <span id="total-chars">0</span><br>
+        クリア数: <span id="clears">0</span>
+    </div>
+    <div id="target">目標: <span id="target-str">???</span></div>
+
+    <div class="game-wrapper">
+        <canvas id="game" width="350" height="350"></canvas>
+
+        <div class="right-tab">
+            <div><b>【ステータス】</b></div>
+            <button id="btn-pause" class="item-btn" style="background:#2196F3;" onclick="togglePause()">⏸️ ポーズ</button>
+            <div>📦 所持: <b id="item-count" style="font-size:14px; color:#ffeb3b;">0</b>個</div>
+            <hr style="border-color:#555; margin:2px 0;">
+            <div><b style="font-size:14px; color:#e01101;">敵</b>の出現率:<br><span id="rate-disp">0.5%</span></div>
+            <button id="btn-rate" class="item-btn" onclick="useItem('rate')">出現率DOWN</button>
+
+            <div><b style="font-size:14px; color:#e01101;">敵</b>の速度:<br><span id="speed-disp">1.1</span></div>
+            <button id="btn-speed" class="item-btn" onclick="useItem('speed')">敵速度DOWN</button>
+
+            <div>自機の速度:<br><span id="player-speed-disp">2.0</span></div>
+            <button id="btn-player-speed" class="item-btn" onclick="useItem('playerSpeed')">自機速度UP</button>
+        </div>
+    </div>
+
+
+    <div class="controls">
+        <div></div>
+        <button class="btn" id="b-up" onpointerdown="startMove('up')" onpointerenter="startMove('up')" onpointerup="stopMove()" onpointercancel="stopMove()">⬆️</button>
+        <div></div>
+
+        <button class="btn" id="b-left" onpointerdown="startMove('left')" onpointerenter="startMove('left')" onpointerup="stopMove()" onpointercancel="stopMove()">⬅️</button>
+        <div></div>
+        <button class="btn" id="b-right" onpointerdown="startMove('right')" onpointerenter="startMove('right')" onpointerup="stopMove()" onpointercancel="stopMove()">➡️</button>
+
+        <div></div>
+        <button class="btn" id="b-down" onpointerdown="startMove('down')" onpointerenter="startMove('down')" onpointerup="stopMove()" onpointercancel="stopMove()">⬇️</button>
+        <div></div>
+    </div>
+
+    <script>
+        function resetGame() {
+            hp = 5;
+            clearCount = 0;
+            totalCollected = 0;
+            bullets = [];
+            itemCount = 0;
+            itemOnMap = null;
+            player.x = 135;
+            player.y = 135;
+            startTime = Date.now();
+            finalElapsedSec = null;
+            // その他の変数も初期化
+            setNextTarget();
+            updateUI();
+        }
+        
+        let restartListenerAdded = false; // ★追加：リスタートリスナーの重複登録防止
+        
+        let levelUpTimer = 0;
+        let prevLevel = 1;
+        
+        // ★ ポーズ状態のフラグを追加
+        let isPaused = false;
+        
+        // ★ ポーズ切替関数
+        function togglePause() {
+        if (hp <= 0) return; // ゲームオーバー時は効かないようにする
+        isPaused = !isPaused; // true と false を交互に切り替え
+        const btn = document.getElementById("btn-pause");
+        if (isPaused) {
+            btn.innerText = "▶️ 再開";
+            btn.style.background = "#4CAF50"; // 再開時は緑色に
+        } else {
+            btn.innerText = "⏸️ ポーズ";
+            btn.style.background = "#2196F3"; // ポーズ時は青色に
+        }
+        }
+        
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        
+        const kanaList = "あいうえおかきくけこがぎぐげごさしすせそざじずぜぞたちつてとだぢづでどなにぬねのはひふへほばびぶべぼまみむめもらりるれろ".split("");
+        
+        // ステータス
+        let hp = 5;
+        let totalCollected = 0;
+        let clearCount = 0;
+        let reqLength = 3;
+        let startTime = Date.now(); // ★追加：ゲーム開始時刻
+        let finalElapsedSec = null; // ★追加：ゲームオーバー時の経過時間を固定する用
+        
+        let currentTarget = [];
+        let collected = [];
+        let boardKana = [];
+        
+        let player = { x: 180, y: 180, size: 10 };
+        let bullets = [];
+        
+        // アイテム関連の変数
+        let itemCount = 0;
+        let itemOnMap = null;        // マップ上のアイテム {x, y}
+        let itemPassedCount = 0;     // 出現したのにスルーしてクリアした回数
+        let rateReduceModifier = 0;  // アイテム使用による出現率軽減値
+        let speedReduceModifier = 0; // アイテム使用による速度軽減値
+        let playerSpeedModifier = 0; // アイテム使用による自機速度上昇値
+        
+        // リザルト画面用の最高記録
+        let maxSpawnRate = 0;
+        let maxEnemySpeed = 0;
+        let maxItemChance = 0;
+        let maxEnemiesOnScreen = 0;
+        
+        function getLevel() {
+            return Math.floor(clearCount / 15) + 1;
+        }
+        
+        // 敵の「現在の出現率」を計算
+        function getSpawnRate() {
+            let baseRate = 0.0005 + getLevel() * 0.004 - rateReduceModifier;
+            return Math.max(0.001, baseRate); // 最低0.1%保証
+        }
+        
+        // 敵の「現在の速度」を計算
+        function getBaseSpeed() {
+            let baseSpeed = 0.5 + getLevel() * 0.1 - speedReduceModifier;
+            return Math.max(0.4, baseSpeed); // 最低速度0.4保証
+        }
+        
+        // 自機の「現在の速度」を計算
+        function getPlayerSpeed() {
+            return 2.0 + playerSpeedModifier;
+        }
+        
+        // ランダムに文字をセット＆アイテム生成チェック
+        function setNextTarget() {
+            reqLength = 3 + Math.floor(clearCount / 15);
+            currentTarget = [];
+            for (let i = 0; i < reqLength; i++) {
+                currentTarget.push(kanaList[Math.floor(Math.random() * kanaList.length)]);
+            }
+            collected = [];
+        
+            // ★ 総取得数12以上でアイテム出現判定
+            let itemChance = 0;
+            if (totalCollected >= 120 && !itemOnMap) {
+                // 基本確率は10% + (スルーした回数 × 10%)
+                itemChance = 0.25 + (itemPassedCount * 0.12);
+                if (Math.random() < itemChance) {
+                    spawnItem();
+                }
+            }
+            // 最高アイテム出現率を記録
+            maxItemChance = Math.max(maxItemChance, itemChance);
+        
+            updateUI();
+        }
+        
+        // アイテムをマップ上に生み出す
+        function spawnItem() {
+            let ix, iy;
+            // プレイヤーから60px以上離れた位置に生成
+            do {
+                ix = 20 + Math.random() * (canvas.width - 40);
+                iy = 20 + Math.random() * (canvas.height - 40);
+            } while (Math.hypot(player.x - ix, player.y - iy) < 60);
+        
+            itemOnMap = { x: ix, y: iy };
+        }
+        
+        // 50音盤の生成
+        function initBoard() {
+            boardKana = [];
+            const cols = 5;
+            const rows = Math.ceil(kanaList.length / cols);
+            const cellW = canvas.width / cols;
+            const cellH = (canvas.height - 30) / rows;
+            
+            kanaList.forEach((char, i) => {
+                let col = i % cols;
+                let row = Math.floor(i / cols);
+                boardKana.push({
+                    char: char,
+                    x: col * cellW + cellW / 2,
+                    y: 30 + row * cellH + cellH / 2,
+                    w: cellW,
+                    h: cellH
+                });
+            });
+        }
+        
+        function updateUI() {
+            document.getElementById("hp").innerText = "❤️".repeat(Math.max(0, hp));
+            document.getElementById("level").innerText = getLevel();
+            document.getElementById("total-chars").innerText = totalCollected;
+            document.getElementById("clears").innerText = clearCount;
+            
+            // 目標文字の表示
+            let targetText = currentTarget.map((c, i) => i < collected.length ? `[${c}]` : c).join("");
+            document.getElementById("target-str").innerText = targetText;
+        
+            // ★ 右タブのUI更新
+            document.getElementById("item-count").innerText = itemCount;
+            document.getElementById("rate-disp").innerText = (getSpawnRate() * 100).toFixed(1) + "%";
+            document.getElementById("speed-disp").innerText = getBaseSpeed().toFixed(1);
+            document.getElementById("player-speed-disp").innerText = getPlayerSpeed().toFixed(1);
+        
+            // アイテムがない時はボタンを押せないように無効化
+            document.getElementById("btn-rate").disabled = (itemCount <= 0);
+            document.getElementById("btn-speed").disabled = (itemCount <= 0);
+            document.getElementById("btn-player-speed").disabled = (itemCount <= 0);
+        }
+        
+        // ★ 右タブのボタンを押した時の処理
+        function useItem(type) {
+            if (itemCount <= 0) return;
+            itemCount--;
+        
+            if (type === 'rate') {
+                rateReduceModifier += 0.005; // 出現率をダウン
+            } else if (type === 'speed') {
+                speedReduceModifier += 0.2;  // 速度をダウン
+            } else if (type === 'playerSpeed') {
+                playerSpeedModifier += 0.5;  // 自機の速度をアップ
+            }
+            itemPassedCount = 0;
+            updateUI();
+        }
+        
+        // 移動コントロール
+        let currentDir = null;
+        
+        function startMove(dir) { currentDir = dir; }
+        function stopMove() { currentDir = null; }
+        
+        function updatePlayerPosition() {
+            if (!currentDir) return;
+            
+            const speed = getPlayerSpeed(); // ★自機の速度を変数から取得
+            if (currentDir === 'up' && player.y > 10) player.y -= speed;
+            if (currentDir === 'down' && player.y < canvas.height - 10) player.y += speed;
+            if (currentDir === 'left' && player.x > 10) player.x -= speed;
+            if (currentDir === 'right' && player.x < canvas.width - 10) player.x += speed;
+        }
+        
+        // 敵の出現処理
+        function spawnBullet() {
+            // 変数 getSpawnRate() から動的に出現率を取得
+            if (Math.random() < getSpawnRate()) {
+                let side = Math.floor(Math.random() * 4);
+                let bx, by, vx, vy;
+                let speed = getBaseSpeed() + Math.random() * 0.5;
+            
+                if (side === 0) { bx = Math.random()*canvas.width; by = 10; vx = (Math.random()-0.5); vy = speed; }
+                else if (side === 1) { bx = canvas.width - 10; by = Math.random()*canvas.height; vx = -speed; vy = (Math.random()-0.5); }
+                else if (side === 2) { bx = Math.random()*canvas.width; by = canvas.height - 10; vx = (Math.random()-0.5); vy = -speed; }
+                else { bx = 10; by = Math.random()*canvas.height; vx = speed; vy = (Math.random()-0.5); }
+            
+                if (Math.hypot(player.x - bx, player.y - by) < 70) return;
+            
+                bullets.push({
+                    x: bx, y: by, vx: vx, vy: vy, warningTimer: 30
+                });
+            }
+        }
+        
+        // メインゲームループ
+        function loop() {
+            // ★ ポーズ中の処理
+            if (isPaused) {
+                // 画面上に「PAUSED」とオーバーレイ表示
+                ctx.fillStyle = "rgba(0, 0, 99, 0.00381)"; // 半透明の黒背景
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 24px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2);
+                ctx.textAlign = "left"; // 元の揃えに戻す
+                
+                requestAnimationFrame(loop);
+                return; // これ以降の移動・敵処理・更新を行わない！
+            }
+            
+            if (getLevel() > prevLevel) {
+                prevLevel = getLevel();
+                levelUpTimer = 90; // 約1.5秒表示
+            }
+        
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updatePlayerPosition();
+        
+            // ★ 最高記録の更新
+            maxSpawnRate = Math.max(maxSpawnRate, getSpawnRate());
+            maxEnemySpeed = Math.max(maxEnemySpeed, getBaseSpeed());
+            maxEnemiesOnScreen = Math.max(maxEnemiesOnScreen, bullets.length);
+            
+            // ★ ゲームオーバーとリザルト画面の描画
+            if (hp <= 0) {
+            if (finalElapsedSec === null) {
+              finalElapsedSec = Math.floor((Date.now() - startTime) / 1000);
+            }
+            let elapsedMin = Math.floor(finalElapsedSec / 60);
+            let elapsedSecRest = finalElapsedSec % 60;
+                ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; // 暗い背景を重ねる
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#ff1744";
+                ctx.font = "bold 28px sans-serif";
+                ctx.fillText("GAME OVER", canvas.width / 2, 55);
+        
+                ctx.fillStyle = "#ffeb3b";
+                ctx.font = "16px sans-serif";
+                ctx.fillText("【 今回の最高記録 】", canvas.width / 2, 95);
+        
+                ctx.textAlign = "left";
+                ctx.fillStyle = "#fff";
+                ctx.font = "14px sans-serif";
+                let textX = 45;
+                let textY = 135;
+                let gap = 28;
+                ctx.fillText(`💀 敵の出現確率: ${(maxSpawnRate * 100).toFixed(1)}%`, textX, textY -10);
+                ctx.fillText(`💨 敵のスピード: ${maxEnemySpeed.toFixed(1)}`, textX, textY + gap * 1 -14);
+                ctx.fillText(`📦 アイテム出現率: ${(maxItemChance * 100).toFixed(1)}%`, textX, textY + gap * 2 -18);
+                ctx.fillText(`🧟 画面内の最大敵数: ${maxEnemiesOnScreen} 体`, textX, textY + gap * 3 -22);
+                ctx.fillText(`🏆 到達レベル: ${getLevel()}`, textX, textY + gap * 4 -26);
+                ctx.fillStyle = "#ff9800";
+                ctx.font = "bold 12px sans-serif";
+                ctx.fillText(`⏱️ 限りある貴重な人生を`, textX, textY + gap * 5 -30);
+                ctx.fillText(`このくだらないゲームに`, textX, textY + gap * 5.8 -35);
+                ctx.fillText(`使った時間: ${elapsedMin}分${elapsedSecRest}秒`, textX, textY + gap * 6.6 -40);
+                
+                ctx.fillStyle = "#4CAF50";
+                ctx.fillRect(canvas.width/2-70, 300, 140, 40);
+                
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "center";
+                ctx.font = "bold 18px sans-serif";
+                ctx.fillText("RESTART", canvas.width/2, 326);
+                
+                    if (!restartListenerAdded) {
+                    restartListenerAdded = true;
+                    canvas.addEventListener("click", (e) => {
+                        if (hp > 0) return;
+                    
+                        const rect = canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                    
+                        if (
+                            x >= canvas.width/2-70 &&
+                            x <= canvas.width/2+70 &&
+                            y >= 300 &&
+                            y <= 340
+                        ){
+                            location.reload();
+                        }
+                    });
+                
+                }
+                requestAnimationFrame(loop);
+                return;
+            }
+            
+            // 50音表の描画と当たり判定
+            let nextNeededChar = currentTarget[collected.length];
+            boardKana.forEach(k => {
+                ctx.fillStyle = (k.char === nextNeededChar) ? "#ff4081" : "#333";
+                ctx.fillRect(k.x - k.w/2 + 1, k.y - k.h/2 + 1, k.w - 2, k.h - 2);
+                
+                ctx.fillStyle = "#fff";
+                ctx.font = "11px sans-serif";
+                ctx.fillText(k.char, k.x - 5, k.y + 4);
+                
+                let dist = Math.hypot(player.x - k.x, player.y - k.y);
+                if (dist < 12 && k.char === nextNeededChar) {
+                    collected.push(k.char);
+                    totalCollected++;
+                    
+                    if (collected.length === currentTarget.length) {
+                        clearCount++;
+                        hp = Math.min(5, hp + 1); // 1回復
+        
+                        // ★ アイテムを無視してクリアした場合のカウント
+                        if (itemOnMap) {
+                            itemPassedCount++;
+                            itemOnMap = null; // 取らなかったアイテムは消滅
+                        }
+        
+                        setNextTarget();
+                    }
+                    updateUI();
+                }
+            });
+        
+            // ★ アイテム（🎁）の描画と獲得判定
+            if (itemOnMap) {
+                ctx.font = "16px sans-serif";
+                ctx.fillText("🎁", itemOnMap.x - 8, itemOnMap.y + 6);
+        
+                let itemDist = Math.hypot(player.x - itemOnMap.x, player.y - itemOnMap.y);
+                if (itemDist < player.size + 10) {
+                    itemCount++;
+                    itemOnMap = null;    // 拾ったので消去
+                    itemPassedCount = 0; // スルー数をリセット
+                    updateUI();
+                }
+            }
+            
+            if (levelUpTimer > 0) {
+                levelUpTimer--;
+            
+                ctx.fillStyle = "rgba(0,0,0,0.35)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+                ctx.textAlign = "center";
+            
+                ctx.fillStyle = "#ffeb3b";
+                ctx.font = "bold 34px sans-serif";
+                ctx.fillText("LEVEL UP!", canvas.width / 2, canvas.height / 2 - 20);
+            
+                ctx.fillStyle = "#fff";
+                ctx.font = "20px sans-serif";
+                ctx.fillText("Lv " + getLevel(), canvas.width / 2, canvas.height / 2 + 20);
+            
+                ctx.textAlign = "left";
+            }
+            
+            // プレイヤーの描画
+            ctx.fillStyle = "#00e676";
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 敵の描画と更新
+            spawnBullet();
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+            
+                // ⚠️ 予告処理
+                if (b.warningTimer > 0) {
+                    b.warningTimer--;
+                    if (Math.floor(b.warningTimer / 4) % 2 === 0) {
+                        ctx.fillStyle = "#ffeb3b";
+                        ctx.font = "14px sans-serif";
+                        ctx.fillText("⚠️", b.x - 7, b.y + 5);
+                    }
+                    continue;
+                }
+            
+                // 通常の移動
+                b.x += b.vx;
+                b.y += b.vy;
+            
+                ctx.fillStyle = "#ff1744";
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 4.2, 0, Math.PI * 2);
+                ctx.fill();
+            
+                // 被弾判定
+                let dist = Math.hypot(player.x - b.x, player.y - b.y);
+                if (dist < player.size + 4.2) {
+                    hp--;
+                    if (collected.length > 0) collected.pop();
+                    bullets.splice(i, 1);
+                    updateUI();
+                    continue;
+                }
+            
+                // 画面外で消去
+                if (b.x < -10 || b.x > canvas.width + 10 || b.y < -10 || b.y > canvas.height + 10) {
+                    bullets.splice(i, 1);
+                }
+            }
+            
+            requestAnimationFrame(loop);
+        }
+        
+        // 初期化＆開始
+        initBoard();
+        setNextTarget();
+        loop();
+    </script>
+</body>
+
+</html>
