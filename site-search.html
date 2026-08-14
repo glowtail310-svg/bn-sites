@@ -5,179 +5,107 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Site Search</title>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #f4f6fb;
-    color: #20242c;
-  }
-  .card {
-    width: min(92vw, 620px);
-    padding: 32px;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.10);
-  }
-  h1 {
-    margin: 0 0 8px;
-    font-size: 28px;
-  }
-  .desc {
-    margin: 0 0 26px;
-    color: #68707d;
-    font-size: 14px;
-  }
-  label {
-    display: block;
-    margin: 18px 0 8px;
-    font-weight: 700;
-    font-size: 14px;
-  }
-  input {
-    width: 100%;
-    padding: 14px 15px;
-    border: 1px solid #d7dce5;
-    border-radius: 12px;
-    outline: none;
-    font-size: 16px;
-    transition: .15s;
-  }
-  input:focus {
-    border-color: #6d7cff;
-    box-shadow: 0 0 0 3px rgba(109,124,255,.12);
-  }
-  .preview {
-    margin-top: 18px;
-    padding: 13px 15px;
-    background: #f6f7fa;
-    border-radius: 10px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 13px;
-    overflow-wrap: anywhere;
-    color: #444b57;
-  }
-  button {
-    width: 100%;
-    margin-top: 18px;
-    padding: 14px;
-    border: 0;
-    border-radius: 12px;
-    background: #5865f2;
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  button:hover { filter: brightness(.95); }
-  button:active { transform: translateY(1px); }
-  .hint {
-    margin-top: 12px;
-    text-align: center;
-    color: #8a919d;
-    font-size: 12px;
-  }
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f4f6fb;color:#20242c;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.card{width:min(100%,620px);background:white;border-radius:20px;padding:32px;box-shadow:0 12px 40px rgba(0,0,0,.1)}
+h1{margin:0 0 8px;font-size:28px}
+.desc{margin:0 0 26px;color:#68707d;font-size:14px}
+label{display:block;margin:18px 0 8px;font-weight:700;font-size:14px}
+input{width:100%;padding:14px 15px;border:1px solid #d7dce5;border-radius:12px;outline:none;font-size:16px}
+input:focus{border-color:#5865f2;box-shadow:0 0 0 3px rgba(88,101,242,.12)}
+.preview{margin-top:18px;padding:13px 15px;background:#f6f7fa;border-radius:10px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;color:#444b57}
+button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:12px;background:#5865f2;color:white;font-size:16px;font-weight:700;cursor:pointer}
+button:active{transform:translateY(1px)}
+.hint{margin-top:12px;text-align:center;color:#8a919d;font-size:12px}
 </style>
 </head>
 <body>
-
 <main class="card">
-  <h1>Site Search</h1>
-  <p class="desc">指定したサイト内だけをGoogleで検索します。</p>
+<h1>Site Search</h1>
+<p class="desc">指定したサイト内だけをGoogleで検索します。</p>
 
-  <label for="site">サイトURL</label>
-  <input id="site" type="url" placeholder="https://example.com" autocomplete="off">
+<label for="site">サイトURL</label>
+<input id="site" type="text" placeholder="https://example.com" autocomplete="off">
 
-  <label for="query">検索ワード</label>
-  <input id="query" type="text" placeholder="検索したい言葉" autocomplete="off">
+<label for="query">検索ワード</label>
+<input id="query" type="text" placeholder="検索したい言葉" autocomplete="off">
 
-  <div class="preview" id="preview">site:example.com 検索ワード</div>
-
-  <button id="searchBtn" type="button">Googleで検索</button>
-
-  <div class="hint">Enterキーでも検索できます</div>
+<div class="preview" id="preview">site:example.com 検索ワード</div>
+<button id="searchBtn" type="button">Googleで検索</button>
+<div class="hint">Enterキーでも検索できます</div>
 </main>
 
 <script>
-const siteInput = document.getElementById("site");
-const queryInput = document.getElementById("query");
-const preview = document.getElementById("preview");
-const searchBtn = document.getElementById("searchBtn");
+(function () {
+  const siteInput = document.getElementById("site");
+  const queryInput = document.getElementById("query");
+  const preview = document.getElementById("preview");
+  const searchBtn = document.getElementById("searchBtn");
 
-function getDomain(value) {
-  value = value.trim();
-  if (!value) return "";
+  function getDomain(value) {
+    value = value.trim();
+    if (!value) return "";
 
-  try {
-    let url = value;
-    if (!/^https?:\\/\\//i.test(url)) {
-      url = "https://" + url;
+    try {
+      const url = /^https?:\/\//i.test(value) ? value : "https://" + value;
+      return new URL(url).hostname.replace(/^www\./i, "");
+    } catch (e) {
+      return value
+        .replace(/^https?:\/\//i, "")
+        .split("/")[0]
+        .replace(/^www\./i, "");
+    }
+  }
+
+  function makeQuery() {
+    const domain = getDomain(siteInput.value);
+    const query = queryInput.value.trim();
+
+    if (!domain) return query;
+    if (!query) return "site:" + domain;
+    return "site:" + domain + " " + query;
+  }
+
+  function updatePreview() {
+    preview.textContent = makeQuery() || "site:example.com 検索ワード";
+  }
+
+  function search() {
+    const domain = getDomain(siteInput.value);
+    const query = queryInput.value.trim();
+
+    if (!domain) {
+      alert("サイトURLを入力してください。");
+      siteInput.focus();
+      return;
     }
 
-    const hostname = new URL(url).hostname;
-    return hostname.replace(/^www\\./i, "");
-  } catch {
-    return value
-      .replace(/^https?:\\/\\//i, "")
-      .split("/")[0]
-      .replace(/^www\\./i, "");
-  }
-}
+    if (!query) {
+      alert("検索ワードを入力してください。");
+      queryInput.focus();
+      return;
+    }
 
-function getSearchQuery() {
-  const domain = getDomain(siteInput.value);
-  const query = queryInput.value.trim();
+    const searchQuery = "site:" + domain + " " + query;
+    const googleURL = "https://www.google.com/search?q=" + encodeURIComponent(searchQuery);
 
-  if (!domain && !query) return "";
-  if (!domain) return query;
-  if (!query) return `site:${domain}`;
-
-  return `site:${domain} ${query}`;
-}
-
-function updatePreview() {
-  preview.textContent = getSearchQuery() || "site:example.com 検索ワード";
-}
-
-function search() {
-  const domain = getDomain(siteInput.value);
-  const query = queryInput.value.trim();
-
-  if (!domain) {
-    siteInput.focus();
-    return;
+    window.open(googleURL, "_blank");
   }
 
-  if (!query) {
-    queryInput.focus();
-    return;
-  }
+  siteInput.addEventListener("input", updatePreview);
+  queryInput.addEventListener("input", updatePreview);
+  searchBtn.addEventListener("click", search);
 
-  const searchQuery = `site:${domain} ${query}`;
-  const url = "https://www.google.com/search?q=" +
-              encodeURIComponent(searchQuery);
+  siteInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") queryInput.focus();
+  });
 
-  window.location.href = url;
-}
+  queryInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") search();
+  });
 
-siteInput.addEventListener("input", updatePreview);
-queryInput.addEventListener("input", updatePreview);
-searchBtn.addEventListener("click", search);
-
-siteInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") queryInput.focus();
-});
-
-queryInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") search();
-});
-
-updatePreview();
+  updatePreview();
+})();
 </script>
-
 </body>
 </html>
